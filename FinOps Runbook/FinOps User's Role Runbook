@@ -1,0 +1,73 @@
+#
+How to Change an Existing User's Role
+
+To change a team member's permissions, you do not need to rewrite your whole setup. You only need to modify the role_definition_name text string inside your code, review the change, and apply it.
+
+Follow these 4 steps to update a role safely:
+#
+Step 1: Open Your Infrastructure Code
+
+1. Open your project folder in VS Code.
+
+2. Open the file located at: infrastructure/main.tf.
+
+#
+Step 2: Edit the Role Name in the Code
+#
+Find the permission block you want to change, and edit the text inside the quotation marks next to role_definition_name.
+
+#
+Example - Downgrading to Read-Only: If your specialist no longer needs deletion powers, change "Contributor" to "Reader":
+#
+resource "azurerm_role_assignment" "delete_wasteful_resources" {
+  scope                = data.azurerm_resource_group.target_group.id
+  role_definition_name = "Reader" # ◄── Type the new role name here
+  principal_id         = data.azuread_user.finops_specialist.object_id
+}
+#
+Step 3: Preview the Change in the Terminal
+Before pushing changes live to Azure, always preview them to make sure you didn't make a typo.
+
+Open your VS Code terminal and move into your infrastructure folder:
+#
+cd infrastructure
+#
+Run the preview command:
+#
+terraform plan
+#
+What to look for: Terraform will look at Azure and print a preview showing that it will destroy 1 old role assignment and create 1 new role assignment with a green + and yellow ~ symbol.
+
+#
+Step 4: Apply the New Role Live
+If the preview looks correct, commit the new role assignment directly to your live Azure cloud account:
+#
+bash
+Run the deploy command:
+#
+terraform apply
+#
+When the terminal asks you to confirm, type yes and press Enter.
+Azure will instantly strip the old permissions away from the specialist's account and activate their brand-new role!
+
+#
+Common Error: Role Definition Not Found
+If the terminal turns red and prints a RoleDefinitionNotFound error during Step 3 or 4, it means the role name was misspelled. Azure role names are case-sensitive and must match official naming conventions exactly.
+#
+Always double-check your spelling against this quick list of core FinOps roles:
+
+1. "Reader" (Safe, view-only access)
+2. "Contributor" (Full creation, editing, and deletion access)
+3. "Cost Management Reader" (Financial billing views only)
+4. "Virtual Machine Contributor" (Stop, start, and resize VMs)
+
+#
+Documented Steps for Future Users to Change Roles
+
+Once this is saved, your documentation section for changing roles simplifies to this streamlined, 3-step pipeline:
+
+Modify the Settings: Open variables.tf and change the text inside any default = "..." block to update an email, group name, or role title.
+#
+Preview the Shift: Open your terminal, change directory into your workspace folder (cd infrastructure), and run:
+
+terraform plan

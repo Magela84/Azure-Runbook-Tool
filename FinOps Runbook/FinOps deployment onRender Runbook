@@ -1,0 +1,36 @@
+To deploy this React frontend as a Static Site on Render, follow these steps:
+#
+step 1. Clear Your Account View Since you are currently stuck on a Settings page, let's get you back to the main screen:
+
+Click on the Render Logo or the word Dashboard at the very top-left corner of your screen.
+
+Now, look at the top-right corner of the webpage and click the bright New + button.
+
+Select Static Site from the drop-down menu (React apps are deployed as Static Sites on Render).
+#
+step 2. Connect Your Repository
+
+Paste your Git URL (https://github.com/Magela84/azure-cost-dashboard.git) into the repository search box and click Connect.
+#
+step 3. Apply the React Specific Settings 
+
+On the configuration screen, fill out the settings exactly like this so Render knows how to open and build your subfolder:
+Name: azure-cost-dashboard-ui (or any name you prefer)
+Branch: main
+
+Root Directory: frontend (This tells Render to look inside your React folder instead of the main project folder)
+
+Build Command: npm install && npm run build
+
+Publish Directory: dist (or build, depending on what your React bundler outputs)
+
+┌────────────────────────────────────────────────────────┐
+│               Render Configuration Form                │
+├────────────────────────────────────────────────────────┤
+│ Root Directory:    frontend                            │
+│ Build Command:     npm install && npm run build        │
+│ Publish Directory: dist                                │
+└────────────────────────────────────────────────────────┘
+
+Render will pull the code from your frontend folder, install the packages, build your static files, and launch your live site!
+

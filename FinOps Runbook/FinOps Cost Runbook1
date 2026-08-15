@@ -1,0 +1,159 @@
+Since this FinOps tool uses a React front-end with Recharts and a Node/Express back-end, you must handle all Azure authentications strictly on your Express server. Never expose your Azure credentials or SDKs to the React frontend.
+
+Prerequisites 
+
+for VS Code Before starting,
+ensure you have these components installed on your computer:
+Node.js (v18 or v20)Azure
+CLI Azure 
+Functions Core Tools (Run npm install -g azure-functions-core-tools@4 in your terminal)
+VS Code Extensions:
+Azure Account 
+Azure Functions
+
+#
+Step 1: Open VS Code in a Clean Folder Open your normal VS Code app. In the top menu, go to File > Open Folder...Create a brand new folder on your computer where you want this project to live (for example, on your Desktop or inside Documents) and name it finops-backend.Select that folder and click Open. Step 
+
+#
+2: Open the Built-In VS Code Terminal Instead of using the separate Windows command prompt, we will use the one built right into VS Code:In the top menu of VS Code, click Terminal > New Terminal. Look at the path shown in your new terminal pane at the bottom. It should show your clean project directory (e.g., C:\Users\yourname\Desktop\finops-backend>).Step 
+
+#
+3: Initialize the Project Inside VS Code Now, run this command in your new VS Code terminal to generate your cloud files cleanly inside your project folder:
+
+PowerShell
+"C:\Program Files\Microsoft\Azure Functions Core Tools\func.exe" init --javascript --model V4
+
+#
+Step 4: Create the HTTP Endpoint Because we are in PowerShell, we will use that same call operator (&) to generate a new function template. Copy and paste this command into your VS Code terminal and press Enter:
+
+PowerShell
+& "C:\Program Files\Microsoft\Azure Functions Core Tools\func.exe" new --name GetCloudCosts --template "HTTP trigger"
+
+What to Expect Next: This command will create a new directory path inside your folder: src/functions/GetCloudCosts.js. Check your left sidebar in VS Code. Do you see a src folder with a GetCloudCosts.js file inside it? Let me know, and we will install the official Azure SDKs next!
+
+#
+Step 5: Install the Azure SDK Packages Copy and paste this standard npm command into your VS Code terminal and press Enter:
+PowerShell
+npm install @azure/identity @azure/arm-cost management
+
+#
+Step 6: Paste Your Cloud Optimization Logic Look at your VS Code Left Sidebar. Expand the src folder, then open the functions folder, and click on GetCloudCosts.js to open it in your editor window. Select everything inside that file and delete it.
+
+Copy and paste this complete, interviewer-ready production script into the file:
+
+Press Ctrl + S (or Cmd + S on Mac) to save the file.
+
+#
+Step 7: Configure Your Local Variables Before running it locally, we must tell the function what specific subscription to inspect. In your VS Code sidebar, open local. settings. json. Replace its contents with this structure, pasting your actual Azure Subscription ID in the field:
+
+#
+Save the file. Once the code and settings files are saved, let me know. Next, we will run the command to log your VS Code terminal into Azure so you can run and test this API live on your machine!
+#
+Step 8: Log into Azure from the VS Code Terminal In your VS Code terminal window at the bottom, type this command and press Enter:
+PowerShell
+az login
+#
+Step 9: Launch Your Local Serverless APINow, let's boot up your serverless environment right on your machine! Copy and paste this exact command into your VS Code terminal and press Enter:
+
+PowerShell
+& "C:\Program Files\Microsoft\Azure Functions Core Tools\func.exe" start
+
+What to Look For:The Core Tools will compile your code and start a local web server. Look for the bright blue text in the log outputs that shows your live endpoint:
+
+#
+Functions:
+    GetCloudCosts: [GET] http://localhost:7071/api/GetCloudCosts
+
+# Install
+Step 1: Install the Function App Infrastructure NativelyCopy and paste this command block into your VS Code terminal and press Enter. This will create your serverless compute housing in the cloud automatically:
+
+PowerShell
+
+# 1. Create a clean Resource Group to hold everything
+az group create --name FinOps-Backend-RG --location eastus
+
+# 2. Create a background storage account (Azure requires this for state tracking)
+az storage account create --name magelfinopsstor --location eastus --resource-group FinOps-Backend-RG --sku Standard_LRS
+
+# 3. Create your live serverless Function App container
+az functionapp create --resource-group FinOps-Backend-RG --consumption-plan-location eastus --runtime node --runtime-version 20 --functions-version 4 --name magel-finops-api --storage-account magelfinopsstor --os-type Windows
+
+#
+Step 2: Push Your Local Code to Your New Cloud AppOnce those infrastructure resources are created, run this short deployment zip command in your terminal to upload your JavaScript code files from your folder to your new live cloud container:
+
+PowerShell
+& "C:\\Program Files\\Microsoft\\Azure Functions Core Tools\\func.exe" azure functionapp publish magel-finops-api
+### Key Architectural Pillars
+1.  **Separation of Concerns (SoC):** The frontend React application is completely decoupled from the data fabric. It never communicates directly with cloud management APIs, preventing the exposure of credentials to client-side browsers.
+2.  **Serverless & Cost-Elastic Compute:** The backend is deployed as an **Azure Function** on a consumption billing model. Compute resources spin down to absolute zero when the dashboard is idle, ensuring the FinOps tool itself incurs zero unnecessary costs.
+3.  **Zero-Trust Identity & Access Management (IAM):** The architecture eliminates the need for connection strings, passwords, or Service Principal client secrets by leveraging native cloud identities.
+
+---
+## 🛠️ Step-by-Step Implementation Runbook
+
+### Phase 1: Local Backend Engineering (VS Code)
+1.  **Project Initialization:** Initialized a local backend workspace utilizing the modern **Azure Functions Node.js V4 programming model**:
+    ```powershell
+    & "C:\Program Files\Microsoft\Azure Functions Core Tools\func.exe" init --javascript --model V4
+    ```
+2.  **Endpoint Creation:** Generated a clean HTTP-triggered serverless template endpoint named `GetCloudCosts`:
+    ```powershell
+    & "C:\Program Files\Microsoft\Azure Functions Core Tools\func.exe" new --name GetCloudCosts --template "HTTP trigger"
+    ```
+3.  **SDK Integration:** Installed the official Microsoft enterprise modules to interface with the cloud identity and billing layers:
+    ```bash
+    npm install @azure/identity @azure/arm-costmanagement
+    ```
+4.  **Core Optimization Logic:** Programmed `GetCloudCosts.js` to initialize a `DefaultAzureCredential` context, query the subscription scope, fetch aggregated `ActualCost` metrics on a `Daily` granularity, and cleanly map row matrices into flat JSON data points ready for consumption by Recharts.
+
+### Phase 2: Cloud Provisioning & DevOps (Azure CLI)
+1.  **Resource Group Isolation:** Created a dedicated logical boundary to house the serverless stack:
+    ```powershell
+    az group create --name FinOps-Backend-RG --location eastus
+    ```
+2.  **State Storage Provisioning:** Automated the creation of a background storage account needed for function state tracking:
+    ```powershell
+    az storage account create --name magelfinopsstor --location eastus --resource-group FinOps-Backend-RG --sku Standard_LRS
+    ```
+3.  **Serverless Container Deployment:** Provisioned a live, fully-managed serverless container configured with Node.js 24:
+    ```powershell
+    az functionapp create --resource-group FinOps-Backend-RG --consumption-plan-location eastus --runtime node --runtime-version 24 --functions-version 4 --name magel-finops-api --storage-account magelfinopsstor --os-type Windows
+    ```
+4.  **Source Code Publishing:** Deployed local JavaScript files directly to the cloud runtime substrate using the Core Tools publisher:
+    ```powershell
+    & "C:\Program Files\Microsoft\Azure Functions Core Tools\func.exe" azure functionapp publish magel-finops-api
+    ```
+
+### Phase 3: Enterprise Hardening & Security (RBAC)
+1.  **Environment Variable Injection:** Securely bound the target subscription ID environment flag to the live function settings:
+    ```powershell
+    az functionapp config appsettings set --name magel-finops-api --resource-group FinOps-Backend-RG --settings AZURE_SUBSCRIPTION_ID="cb6fa056-2ac2-4910-8f46-04326a9a1ec2"
+    ```
+2.  **Managed Identity Activation:** Activated an **Entra ID System-Assigned Managed Identity**, converting the serverless computing node into a verified cryptographic security principal:
+    ```powershell
+    az functionapp identity assign --name magel-finops-api --resource-group FinOps-Backend-RG
+    ```
+3.  **Least-Privilege Role Mapping:** Implemented Role-Based Access Control (RBAC) by binding the function’s unique `principalId` strictly to the **Cost Management Reader** role, guaranteeing read-only visibility without write or delete capabilities:
+    ```powershell
+    az role assignment create --assignee "b1a6293f-3f4e-41d0-975b-b5f521af3c16" --role "Cost Management Reader" --scope "/subscriptions/cb6fa056-2ac2-4910-8f46-04326a9a1ec2"
+    ```
+4.  **Network-Level CORS Hardening:** Configured Cross-Origin Resource Sharing rules to reject all anonymous cross-domain traffic, explicitly whitelisting only the Render production frontend:
+    ```powershell
+    az functionapp cors add --name magel-finops-api --resource-group FinOps-Backend-RG --allowed-origins "https://onrender.com"
+    ```
+---
+
+## 📈 Frontend Integration Tier
+The user interface reads data seamlessly by pointing standard React `useEffect` hooks directly at the serverless API layer. Because the backend pre-aggregates arrays into clean objects containing `date` and `cost` metrics, data ingestion flows smoothly into the rendering layout:
+
+```javascript
+fetch('https://azurewebsites.net')
+  .then(res => res.json())
+  .then(data => setCostData(data));
+```
+
+The parsed data stream is piped directly into Recharts components:
+*   `<XAxis dataKey="date" />` maps chronological billing points.
+*   `<Bar dataKey="cost" fill="#007fff" />` renders scalable, color-coded expenditure bars.
+
+---

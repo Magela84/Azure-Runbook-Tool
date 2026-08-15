@@ -1,0 +1,78 @@
+Step by Step Guide for Deployment on onrender.com.
+
+Using GitHub Actions 
+
+To use GitHub Actions to test your code before Render deploys it, you will turn off Render's automatic deployment feature and let GitHub trigger the deployment only after your tests pass.
+
+Here is the step-by-step guide to setting this up.
+#
+Step 1. Turn Off Render Auto-Deploy
+
+First, prevent Render from deploying automatically every time you push code.
+
+1. Go to your Render Dashboard.
+2. Select your Web Service.
+3. Click Settings in the left menu.
+4. Scroll down to Auto Deploy and change it to No.
+5. Click Save Changes.
+#
+Step 2. Copy Your Render Deploy Hook Render provides a private URL that triggers a deployment when it receives a request.
+
+1. On the same Settings page in Render, scroll to the Deploy Hook sections.
+2. Copy the long unique URL provided (it looks like https://render.com...).
+#
+Step 3. Add the Deploy Hook to GitHub 
+
+Keep your deploy hook URL hidden by saving it as a secret in your GitHub repository.
+
+1. Go to your repository on GitHub. 
+2. Click Settings > Secrets and variables > Actions. 
+3. Click New repository secret.
+4. Name the secret RENDER_DEPLOY_HOOK.
+5. Paste your Render Deploy Hook URL into the Secret box.
+6. Click Add secret.
+#
+Step 4. Create the GitHub Actions Workflow 
+
+1. Tell GitHub to run your tests first, and then call Render if the tests succeed.
+2. In your project's local code directory, create a folder named .github at the root.
+3. Inside it, create another folder named workflows.
+4. Create a file inside that folder named ci-cd.yml.
+5. Paste the following configuration block into the file:
+
+#
+name: Test and Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies and run tests
+        run: |
+          # Replace these lines with your actual test commands
+          npm install
+          npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+          #
+Step 5. Push Your Changes 
+
+1. Commit and push the new workflow file to GitHub:
+2. git add .github/workflows/ci-cd.yml
+3. git commit -m "Add CI/CD workflow"
+4. git push origin main
+GitHub will now automatically run your test suite. The deploy step will only execute if the test step completes with zero errors.
