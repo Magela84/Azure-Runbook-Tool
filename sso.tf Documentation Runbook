@@ -1,0 +1,14 @@
+For future engineering team members, here is the official workflow for deploying and reading the new SSO blueprint:
+
+Deploy the Identity: During a live deployment window, navigate to the infrastructure folder and execute:
+#
+bash
+terraform apply
+#
+Retrieve the Client ID: The script will automatically print out your custom sso_client_id directly inside your terminal panel.
+
+Retrieve the Client Password: To grab your hidden secure string to pass into Render, execute this manual command:
+
+bash
+
+terraform output sso_client_secret

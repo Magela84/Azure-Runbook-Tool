@@ -1,0 +1,32 @@
+#
+ 3. Documented Maintenance Operations for Future Teams Future engineers must follow these exact command procedures to manage the container configurations locally inside their workspace terminal panels:
+#
+Launching the System FreshTo wipe out stale background memory states and force Docker to re-compile your frontend and backend containers from clean code lines, run:
+
+#
+bash
+docker compose up --build
+
+#
+Checking for Port Binding Blocks 
+If a container fails to start with an Only one usage of each socket address is normally permitted error response, port 3001 is being held hostage by a background system task. Run these commands to clear it:
+
+#
+Identify the Task ID (PID):
+#
+bash
+netstat -ano | findstr :3001
+
+#
+Force-Stop the Task: (Replace 22056 with the PID number displayed on your far-right screen log column)
+#
+bash
+taskkill /PID 22056 /F
+
+#
+Safe Teardown Routine 
+When engineering teams finish updating code parameters, they must never simply shut down their terminal windows. They must execute the clean teardown macro to free up computer memory and safely sever background container network bridges:
+
+#
+bash
+docker compose down

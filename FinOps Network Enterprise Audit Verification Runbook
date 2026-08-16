@@ -1,0 +1,15 @@
+#4
+
+ Enterprise Compliance Audit Verification
+
+To verify that your cloud network walls are operating with a true "fail-closed" security setup, administrators should run this quick testing protocol:
+#
+1. Disconnect your personal computer from the corporate network or corporate VPN.
+
+2. Attempt to ping or curl the api link from a generic public network connection:
+#
+bash
+curl -I https://onrender.com
+
+#
+Target Success Result: The terminal should return an access denial code or fail to resolve completely. If the command returns a successful response code while you are on a public network, it means the isolation parameters have not fully committed to the cluster database yet.

@@ -1,0 +1,49 @@
+#
+Network Isolation (Virtual Networks) Documentation
+
+By default, standard public deployments expose the application login screen to the global web, making it vulnerable to automated brute-force or credential-stuffing attacks. To satisfy enterprise cybersecurity standards, this system must utilize Network Isolation to restrict dashboard visibility solely to internal authorized corporate boundaries.
+#
+1. Network Topology Model Enabling network isolation encapsulates both your dynamic application instance container and database layer deep within an isolated, private virtual runtime bubble [13].
+#
+[ Public Web Space ]
+         │
+         ▼ (Public Inbound Requests Blocked ❌)
+┌────────────────────────────────────────────────────────┐
+│  🔒 Enterprise Private Space Perimeter                 │
+│                                                        │
+│  ┌────────────────────────┐    ┌────────────────────┐  │
+│  │ Corporate VPN Gateway  │───>│ Dashboard App      │  │
+│  │ (Authorized Inbound)   │    │ (Docker Service)   │  │
+│  └────────────────────────┘    └─────────┬──────────┘  │
+│                                          │             │
+│                                          ▼             │
+│                                ┌────────────────────┐  │
+│                                │ Internal Databases │  │
+│                                └────────────────────┘  │
+└────────────────────────────────────────────────────────┘
+#
+ 2. Structural Infrastructure-as-Code Configuration To establish this secure enterprise perimeter programmatically, future cloud administrators must configure the orchestration environment blueprint directly inside the root render.yaml specification file [13].Replace or wrap your current execution parameters using the strict group cluster schema below:
+
+# =============================================================
+# Render Private Space Project Specification
+# =============================================================
+projects:
+  - name: enterprise-finops-suite
+    environments:
+      - name: corporate-production
+        
+        # 1. Activate strict private cloud firewall parameters
+        networking:
+          isolation: enabled # ◄── Drops all unauthenticated public internet traffic [13]
+        
+        # 2. Bind the dockerized cost utility into the isolated workspace
+        services:
+          - type: web
+            name: azure-cost-dashboard
+            runtime: docker
+            dockerfilePath: ./Dockerfile
+            plan: free
+            healthCheckPath: /api/health
+            envVars:
+              - key: NODE_ENV
+                value: production

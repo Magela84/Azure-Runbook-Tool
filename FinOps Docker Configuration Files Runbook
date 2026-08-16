@@ -1,0 +1,17 @@
+#
+ Core Docker Configuration Files Future users can inspect or modify how the containers build by reviewing these specific project files: A. The Production Entry point (render.yaml)To ensure Render compiles the app using the exact internal settings shown above, the deployment engine is locked to the runtime: docker definition:
+# yaml
+services:
+  - type: web
+    name: azure-cost-dashboard
+    runtime: docker           # ◄── Enforces Docker compilation over raw code
+    dockerfilePath: ./Dockerfile
+    plan: free
+#
+B. The Client User Interface (frontend/Dockerfile)The frontend uses a multi-stage build script to keep the final image size incredibly small:
+#
+Stage 1 (Build): Pulls a lightweight node:22-alpine footprint, installs dependencies via npm ci, and compiles your React assets into static files inside a /dist folder.
+#
+Stage 2 (Production Host): Discards the heavy Node engine, pulls a secure nginx:alpine image, drops your compiled /dist files into Nginx's public web folder, and hosts the UI on port 3000.
+#
+C. The API Application Layer (backend/Dockerfile)The backend pulls a safe node:22-alpine foundation, maps its active environment to port 3001, and sets up an isolated system directory partition at /app/logs to protect live operational files.

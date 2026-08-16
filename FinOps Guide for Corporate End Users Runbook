@@ -1,0 +1,15 @@
+3#
+Operational Guide for Corporate End Users
+
+Once network isolation is activated, typing your live .onrender.com URL into a standard browser at home will result in a connection timeout or network access error page. Future users must utilize one of these two corporate ingress channels to safely open the interface:
+
+#
+A. Corporate Office Network Access 
+
+Employees must be physically plugged into or connected to the office's secure, white-listed local area network infrastructure (Wi-Fi/Ethernet).
+#
+B. Secure Corporate VPN (Remote Access)
+
+Remote engineers must initialize their enterprise virtual private network client (such as Cisco AnyConnect, OpenVPN, or Palo Alto Global Protect).
+
+Once the encrypted tunnel securely authenticates against your identity director, the local machine is assigned a private internal routing token, restoring complete visibility to the live metrics portal dashboard.

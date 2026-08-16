@@ -1,0 +1,23 @@
+#
+Application Containerization (Docker) Documentation 
+#
+This application relies entirely on a containerized architecture for both local development and live production environments. 
+By packaging the React frontend and Node.js backend into isolated Docker containers, we eliminate "it works on my machine" bugs and guarantee identical deployment behavior across all servers.
+#
+ 1. Container Architecture SetupThe codebase splits the application into two separate optimized container environments defined by the master docker-compose.yml blueprint at the root of the project:
+
+
+                     ┌────────────────────────────────┐
+                     │     Master Docker Compose      │
+                     └───────────────┬────────────────┘
+                                     │
+         ┌───────────────────────────┴───────────────────────────┐
+         ▼                                                       ▼
+┌─────────────────────────────────┐             ┌─────────────────────────────────┐
+│       Frontend Container        │             │        Backend Container        │
+│       (frontend/Dockerfile)     │             │       (backend/Dockerfile)      │
+├─────────────────────────────────┤             ├─────────────────────────────────┤
+│ • Build Layer: Node 22-Alpine   │             │ • Base Layer: Node 22-Alpine    │
+│ • Production Host: Nginx Web OS │             │ • Active Port: 3001             │
+│ • Active Port: 3000             │             │ • Shared Vol: backend/logs/     │
+└─────────────────────────────────┘             └─────────────────────────────────┘
