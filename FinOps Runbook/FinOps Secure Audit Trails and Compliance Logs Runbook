@@ -1,0 +1,166 @@
+#
+FinOps Secure Audit Trails and Compliance Logs Documentation
+#
+When an application has the power to manage high-stakes corporate infrastructure, maintaining an unalterable log of user actions is required for compliance and forensics. This system ensures accountability by instantly streaming audit logs to a secure, external vault outside of the hosting server.
+#
+🏗️ 1. The Audit Log Architecture
+The application uses a dual-logging strategy. Every time an optimization action occurs (such as resizing a server), the backend logs it in two places simultaneously:
+#
+                  ┌───────────────────────────────┐
+                  │    FinOps Dashboard Action    │
+                  └───────────────┬───────────────┘
+                                  │
+         ┌────────────────────────┴────────────────────────┐
+         ▼                                                 ▼
+┌─────────────────────────────────┐       ┌─────────────────────────────────┐
+│     Local Backup Logging        │       │    External Enterprise Vault    │
+│  (backend/logs/destroy-audit)   │       │   (Azure Log Analytics/SIEM)    │
+├─────────────────────────────────┤       ├─────────────────────────────────┤
+│ • Fast local text stream file   │       │ • Sent via secure HTTPS webhook │
+│ • Good for quick diagnostics    │       │ • Completely unalterable log    │
+│ • Vulnerable if server crashes  │       │ • Permanent compliance history  │
+└─────────────────────────────────┘       └─────────────────────────────────┘
+#
+🛠️ 2. How to Activate Secure Webhook Streaming
+Your repository already includes code that looks for an external log sink. To activate it, you do not need to write new code—you just need to pass an endpoint URL into your environment variables.
+
+#
+Step A: Set Up Your Log Sink in Azure
+1. Log into your Azure Portal.
+2. Search for and open Log Analytics Workspaces or Azure Monitor.
+3. Create a new workspace and generate a unique Data Collection Endpoint Webhook URL.
+
+#
+Step B: Inject the Secret into Render
+1. Open your Render Dashboard and click on your Backend Web Service.
+2. Go to Environment on the left menu.
+3. Click Add Environment Variable and add this exact key:
+4. AUDIT_WEBHOOK_URL: Paste your secure Azure Log Analytics webhook link here.
+5. Click Save Changes.
+
+As soon as the backend restarts, it will automatically begin streaming every user click, view, and resource adjustment straight to your permanent Azure log warehouse.
+#
+📋 3. Log Payload Structure
+Future data analysts or security teams can query the logs inside Azure using KQL (Kusto Query Language). Every log event outputs as a structured JSON object that tracks Who, What, and When:
+#
+json
+{
+  "timestamp": "2026-08-16T17:50:00Z",
+  "actor": "finops.specialist@yourcompany.com",
+  "action": "RESOURCE_RESIZE",
+  "target_resource": "/subscriptions/sub-id/resourceGroups/rg-dev/providers/Microsoft.Compute/virtualMachines/vm-heavy-01",
+  "details": {
+    "old_size": "Standard_D8s_v5",
+    "new_size": "Standard_D2s_v5",
+    "estimated_monthly_savings_usd": 240.00
+  },
+  "status": "SUCCESS"
+}
+#
+4. Enable Azure Activity Logs at the Subscription Scope
+Every billing-affecting action (resource creation, deletion, resizing, role assignment changes) is recorded in the Azure Activity Log. This must be enabled across the entire FinOps subscription.
+
+#
+PowerShell
+# 1. Create a dedicated Log Analytics workspace to centralize audit data
+az monitor log-analytics workspace create --resource-group FinOps-Backend-RG --workspace-name finops-audit-logs --location eastus
+
+# 2. Stream the entire subscription's Activity Log into that workspace
+az monitor diagnostic-settings create --resource "/subscriptions/<your-subscription-id>" --name "finops-activity-audit" --workspace "/subscriptions/<your-subscription-id>/resourceGroups/FinOps-Backend-RG/providers/Microsoft.OperationalInsights/workspaces/finops-audit-logs" --logs '[{"category":"Administrative","enabled":true}]'
+
+#
+What to Expect Next: Every Administrative event (e.g., "Update Role Assignment", "Delete Virtual Machine", "Resize Virtual Machine") now flows into the finops-audit-logs workspace within minutes.
+#
+5. Capture Cost Management Data Exports for Billing Compliance
+For billing compliance (chargeback, showback, external audits), cost data must be exported on a schedule to durable storage. Azure Cost Management exports generate daily CSV files you can retain for years.
+
+#
+PowerShell
+# 1. Create a container to hold immutable billing snapshots
+az storage container create --name finops-cost-exports --account-name <storage-account>
+
+# 2. Create a daily export of the current month's actual costs
+az costmanagement export create --scope "/subscriptions/<your-subscription-id>" --name "daily-actual-cost-export" --export-type ActualCost --timeframe MonthToDate --storage-container finops-cost-exports --storage-account <storage-account> --recurrence Daily --schedule-from 2026-01-01 --schedule-to 2030-12-31
+#
+6. Enforce Immutable (Write-Once) Retention
+Compliance logs are worthless if an attacker (or a careless engineer) can delete them. Apply policy-based immutability so archived billing snapshots cannot be modified or deleted for the required retention window.
+
+#
+PowerShell
+# Enable versioning on the storage account (prerequisite for immutability)
+az storage account blob-service-properties update --account-name <storage-account> --enable-versioning true
+
+# Set a time-based retention policy on the export container (e.g., 5 years)
+az storage container immutability-policy create --account-name <storage-account> --container-name finops-cost-exports --period 1825 --policy-mode Locked
+#
+7. Send Security-Relevant Events to Microsoft Sentinel
+To detect suspicious FinOps activity (e.g., a role upgrade to Contributor, mass VM deletion), connect the audit workspace to Microsoft Sentinel and build analytics rules.
+
+#
+PowerShell
+# Connect Sentinel to your Log Analytics workspace
+az sentinel create --workspace-name finops-audit-logs --resource-group FinOps-Backend-RG --location eastus
+
+# Confirm the connector is linked (list current data connectors)
+az sentinel data-connector list --workspace-name finops-audit-logs --resource-group FinOps-Backend-RG
+#
+Then create a scheduled query rule that alerts on high-risk role changes:
+#
+kusto
+AzureActivity
+| where OperationNameValue == "Microsoft.Authorization/roleAssignments/write"
+| where Properties_d.responseBody.properties.roleName in ("Contributor", "Owner")
+| project TimeGenerated, Caller, CallerIpAddress, SubscriptionId, CorrelationId
+#
+8. Route Function App Activity into the Same Archive
+The serverless cost API (GetCloudCosts) must also leave an audit footprint. Forward the Function App's diagnostic logs to the same Log Analytics workspace so all layers share one timeline.
+
+#
+PowerShell
+az monitor diagnostic-settings create --resource "<function-app-id>" --name "finops-function-audit" --workspace "/subscriptions/<your-subscription-id>/resourceGroups/FinOps-Backend-RG/providers/Microsoft.OperationalInsights/workspaces/finops-audit-logs" --logs '[{"category":"FunctionAppLogs","enabled":true}]'
+#
+9. Query the Unified Audit Trail
+Use Log Analytics to answer the three standard auditor questions: who, what, when.
+
+#
+kusto
+// Who changed cost-related permissions?
+AzureActivity
+| where OperationNameValue contains "roleAssignments"
+| summarize Changes = count() by Caller, CallerIpAddress, bin(TimeGenerated, 1d)
+
+// What billing actions occurred on a given day?
+AzureActivity
+| where TimeGenerated between (datetime("2026-01-01") .. datetime("2026-01-02"))
+| where OperationNameValue contains "Microsoft.Compute" or OperationNameValue contains "Microsoft.CostManagement"
+| project TimeGenerated, Caller, OperationNameValue, ResourceId
+
+// When was the Function App invoked and did it succeed?
+FunctionAppLogs
+| where FunctionName == "GetCloudCosts"
+| summarize Invocations = count(), Failures = countif(Level == "Error") by bin(TimeGenerated, 1h)
+#
+10. Retention and Archival Policy
+Standard retention schedule for a FinOps compliance program:
+1. Activity Logs (workspace): 365 days.
+2. Cost Export CSVs (immutable container): 5 years.
+3. Sentinel analytic rules/alerts: 90 days in workspace, archive after.
+4. Immutable backup copy: Store a second copy in a different Azure region for disaster recovery.
+
+#
+Common Error: Diagnostic Settings Not Applying
+If the Activity Log stops streaming, re-run the diagnostic settings create command with --export-to-resource-specific false. Some log categories do not support the resource-specific destination table.
+#
+🏁 Enterprise Hardening Checklist
+Congratulations! By documenting and coding these 5 steps, your project has officially transitioned from a simple portfolio template into an absolute tank of a business tool:
+1. Step 1 (IAM): Read-Only automation roles built into Terraform profiles.
+2. Step 2 (SSO): Microsoft corporate email logins forced via secure OIDC blueprints.
+3. Step 3 (Docker): Total runtime stability locked down inside Alpine containers.
+4. Step 4 (VNet): A clear roadmap set for private network isolation upgrades.
+5. Step 5 (Auditing): Secure, tamper-proof webhook event logging fully mapped out.
+#
+Documented Steps for Future Teams
+Once this is saved, your audit enablement routine simplifies to this 3-step pipeline:
+1. Confirm the diagnostic settings exist: az monitor diagnostic-settings list --resource "/subscriptions/<your-subscription-id>".
+2. Confirm cost exports are still producing daily files: az storage blob list --container-name finops-cost-exports.
+3. Confirm the Sentinel connection is healthy and alerts are firing: az sentinel analytics-settings list --workspace-name finops-audit-logs --resource-group FinOps-Backend-RG.

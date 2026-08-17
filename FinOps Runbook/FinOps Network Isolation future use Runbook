@@ -47,3 +47,39 @@ projects:
             envVars:
               - key: NODE_ENV
                 value: production
+#
+3. Render Private Space Activation Steps
+The isolation flag only applies after a Private Space has been created. Follow this sequence:
+1. In the Render dashboard, click New + and select Private Space.
+2. Choose the region closest to your corporate office and create the space.
+3. Once created, go to the dashboard view for your services.
+4. Click Settings > Networking and set Isolation to Enabled.
+5. Under Inbound Rules, add your corporate VPN public IP ranges.
+6. Redeploy the service — all public inbound traffic is now dropped.
+
+#
+4. Azure VNet Integration for the Serverless Backend
+The Azure Functions backend (GetCloudCosts) must be locked behind a virtual network so it is unreachable from the public internet.
+
+#
+PowerShell
+# 1. Create a dedicated VNet for the FinOps backend
+az network vnet create --resource-group FinOps-Backend-RG --name finops-vnet --address-prefix 10.10.0.0/16 --subnet-name backend-subnet --subnet-prefix 10.10.1.0/24
+
+# 2. Create a private endpoint for the storage account used by the Function App
+az network private-endpoint create --resource-group FinOps-Backend-RG --name finops-storage-pe --vnet-name finops-vnet --subnet backend-subnet --private-connection-resource-id "/subscriptions/<your-subscription-id>/resourceGroups/FinOps-Backend-RG/providers/Microsoft.Storage/storageAccounts/<storage-account>" --group-id table --connection-name finops-storage-link
+
+# 3. Integrate the Function App into the VNet
+az functionapp vnet-integration add --name <app-name> --resource-group FinOps-Backend-RG --vnet finops-vnet --subnet backend-subnet
+
+# 4. Lock down the Function App to only accept traffic from the VNet
+az functionapp config access-restriction add --resource-group FinOps-Backend-RG --name <app-name> --rule-name deny-public --ip-address any --action Deny --priority 100
+#
+5. Verify Both Layers Are Isolated
+After applying both Render and Azure isolation, run this verification sequence from a machine outside the corporate network:
+1. Try to reach the frontend URL in a browser — you should get a connection timeout.
+2. Try to curl the backend API: curl -I https://<app-name>.azurewebsites.net/api/GetCloudCosts — you should get a 403 Forbidden or connection refused.
+3. Connect to your corporate VPN, then retry both — they should respond normally.
+#
+Common Error: Function App VNet Integration Fails
+If az functionapp vnet-integration add returns a SubnetNotFound error, the subnet name may differ from what was created. Run az network vnet subnet list --resource-group FinOps-Backend-RG --vnet-name finops-vnet to confirm the exact name.

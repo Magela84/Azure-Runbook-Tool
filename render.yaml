@@ -1,0 +1,23 @@
+# =============================================================
+# Render Blueprint Configuration
+# =============================================================
+# NOTE: Network isolation requires a Render Private Space.
+# After deploying, enable it in the Render dashboard:
+#   1. Upgrade to a Private Space plan
+#   2. Go to Settings > Networking > Isolation > Enabled
+#   3. Whitelist your corporate VPN IP range
+# =============================================================
+
+services:
+  # ── Frontend (Docker) ──────────────────────────────────────
+  - type: web
+    name: azure-cost-dashboard
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUDIT_WEBHOOK_URL
+        sync: false  # set in Render dashboard
