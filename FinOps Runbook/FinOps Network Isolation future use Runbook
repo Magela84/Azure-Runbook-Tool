@@ -48,14 +48,37 @@ projects:
               - key: NODE_ENV
                 value: production
 #
-3. Render Private Space Activation Steps
-The isolation flag only applies after a Private Space has been created. Follow this sequence:
-1. In the Render dashboard, click New + and select Private Space.
-2. Choose the region closest to your corporate office and create the space.
-3. Once created, go to the dashboard view for your services.
-4. Click Settings > Networking and set Isolation to Enabled.
-5. Under Inbound Rules, add your corporate VPN public IP ranges.
-6. Redeploy the service — all public inbound traffic is now dropped.
+3. Frontend Isolation via Cloudflare WAF
+Render does not natively block public internet traffic on web services. To restrict dashboard access to corporate-only, proxy the frontend through Cloudflare and enforce IP allowlisting at the edge.
+#
+Step A: Set Up Cloudflare
+1. Create a free Cloudflare account at https://dash.cloudflare.com.
+2. Add your domain (e.g., yourcompany.com) to Cloudflare.
+3. Update your domain's nameservers at your registrar to the Cloudflare nameservers shown in the dashboard.
+4. In Cloudflare DNS, add an A record for your dashboard hostname (e.g., dashboard.yourcompany.com) pointing to your Render service's public IP.
+5. Make sure the orange cloud (Proxy) icon is ON for that record — this routes all traffic through Cloudflare's edge.
+
+#
+Step B: Create the IP Allowlist Rule
+1. In Cloudflare, go to Security > WAF > Tools > IP Access Rules.
+2. Add a rule for each corporate VPN public IP range:
+   a. IP/Range: <your-office-vpn-ip-range>
+   b. Action: Allow
+   c. Note: Corporate VPN
+3. Then go to Security > WAF > Custom Rules and create a catch-all Block rule:
+   a. Rule name: Block All Non-Corporate Traffic
+   b. Expression: http.host eq "dashboard.yourcompany.com"
+   c. Action: Block
+4. Deploy the rules. Cloudflare now rejects every request that doesn't originate from your allowlisted IPs before it ever reaches Render.
+
+#
+Step C: Verify Isolation
+1. Disconnect from the corporate VPN.
+2. Open an incognito browser and navigate to your dashboard URL — you should see a Cloudflare 1020 Access Denied page.
+3. Reconnect to the corporate VPN and refresh — the dashboard should load normally.
+#
+Common Error: DNS Not Resolving After Nameserver Update
+DNS propagation can take up to 24 hours. If the dashboard doesn't load after updating nameservers, run dig dashboard.yourcompany.com from your terminal and confirm the response shows Cloudflare IPs (104.x.x.x or 172.x.x.x) instead of Render's.
 
 #
 4. Azure VNet Integration for the Serverless Backend

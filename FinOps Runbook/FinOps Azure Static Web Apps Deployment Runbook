@@ -1,0 +1,193 @@
+#
+Deploying the FinOps Dashboard on Azure Static Web Apps
+#
+Azure Static Web Apps is the recommended deployment target for this application. Because the backend (GetCloudCosts) already runs as an Azure Function in the same subscription, deploying the React frontend into Azure Static Web Apps keeps every layer on a single cloud, under one bill, inside one Resource Group, with native IP restrictions and Azure AD SSO built in — no Cloudflare or third-party proxy required.
+#
+Prerequisites
+Before starting, ensure these tools are installed on your machine:
+1. Azure CLI (az) — https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
+2. Node.js v18 or v20
+3. GitHub account with this repository forked or pushed
+4. A domain you own (optional — required only for custom URL)
+#
+Step 1: Log Into Azure From Your Terminal
+Open your terminal (PowerShell, Bash, or VS Code terminal) and run:
+#
+PowerShell
+az login
+#
+Follow the browser prompt to authenticate. Once complete, confirm your subscription is selected:
+#
+PowerShell
+az account show --query "{name:name, id:id}" --output table
+#
+If the wrong subscription is active, switch to the correct one:
+#
+PowerShell
+az account set --subscription "<your-subscription-id>"
+#
+Step 2: Create the Resource Group (If It Doesn't Exist)
+Your existing FinOps-Backend-RG already holds the Function App. If you haven't created it yet, run:
+#
+PowerShell
+az group create --name FinOps-Backend-RG --location eastus
+#
+Step 3: Create the Azure Static Web Apps Resource
+This command provisions the hosting container in Azure. Replace the values in angle brackets with your actual settings.
+#
+PowerShell
+az staticwebapp create \
+  --name finops-dashboard \
+  --resource-group FinOps-Backend-RG \
+  --location eastus \
+  --sku Free \
+  --branch main \
+  --repository-url https://github.com/Magela84/Azure-Runbook-Tool.git \
+  --app-location "/" \
+  --output-location "dist"
+#
+What each flag does:
+--name: A unique name for your Static Web App (becomes https://finops-dashboard.azurestaticapps.net)
+--sku Free: The free tier — sufficient for this project
+--branch main: The Git branch to deploy from on every push
+--app-location "/": The folder containing your React source code (root of this repo)
+--output-location "dist": The build output folder (adjust if your bundler uses "build" instead of "dist")
+#
+Step 4: Grant the Deployment Token GitHub Permission
+Azure automatically creates a GitHub Actions workflow inside your repository at .github/workflows/azure-static-web-apps-*.yml. However, it needs a secret to authenticate.
+#
+1. In the Azure Portal, navigate to your new Static Web App resource (finops-dashboard).
+2. In the left menu, click Manage deployment token.
+3. Copy the deployment token value.
+4. Go to your GitHub repository: https://github.com/Magela84/Azure-Runbook-Tool
+5. Click Settings > Secrets and variables > Actions.
+6. Click New repository secret.
+7. Name: AZURE_STATIC_WEB_APPS_API_TOKEN
+8. Paste the deployment token into the Secret box.
+9. Click Add secret.
+#
+Step 5: Push Your Code to Trigger the First Deployment
+If you created the resource with az staticwebapp create, the workflow file was already added to your repo. Simply push to main:
+#
+PowerShell
+git add .
+git commit -m "Deploy to Azure Static Web Apps"
+git push origin main
+#
+If the workflow file was not added automatically, create it manually. In your project root, create the file .github/workflows/deploy-frontend.yml and paste:
+#
+yaml
+name: Deploy Frontend to Azure Static Web Apps
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/"
+          output_location: "dist"
+#
+Then commit and push:
+#
+PowerShell
+git add .github/workflows/deploy-frontend.yml
+git commit -m "Add frontend deployment workflow"
+git push origin main
+#
+Step 6: Verify the Deployment
+1. Wait approximately 2–3 minutes for the GitHub Actions workflow to complete.
+2. In the Azure Portal, open your Static Web App resource and click the default hostname URL (https://finops-dashboard.azurestaticapps.net).
+3. The dashboard should load and display the Recharts bar chart.
+4. Open the browser Developer Tools (F12) > Network tab and confirm the API calls are returning data.
+#
+Step 7: Restrict Access to Corporate IPs Only
+Azure Static Web Apps supports IP-based access restrictions natively — no Cloudflare needed.
+#
+PowerShell
+# Allow only your corporate VPN public IP range
+az staticwebapp hostname set \
+  --name finops-dashboard \
+  --resource-group FinOps-Backend-RG \
+  --hostname "dashboard.yourcompany.com" \
+  --ip-security-restriction "name=CorporateVPN,ipAddressOrRange=<your-office-vpn-ip-range>,action=Allow" \
+  --ip-security-restriction "name=BlockAll,ipAddressOrRange=0.0.0.0-255.255.255.255,action=Deny"
+#
+To find your current public IP (for testing):
+#
+PowerShell
+curl -s https://api.ipify.org
+#
+After applying the restriction, verify from outside your VPN that access is denied:
+#
+PowerShell
+curl -I https://finops-dashboard.azurestaticapps.net
+# Expected: 403 Forbidden
+#
+Step 8: Connect the Frontend to Your Azure Functions Backend
+The React frontend must call the GetCloudCosts API. Update the fetch URL in CostDashboard.jsx to point at your live Function App:
+#
+javascript
+// Replace the placeholder with your actual Function App URL
+fetch('https://magel-finops-api.azurewebsites.net/api/GetCloudCosts')
+#
+Then commit and push — the workflow will redeploy automatically.
+#
+Step 9: Enable Azure AD / Entra ID SSO (Optional but Recommended)
+For enterprise-grade authentication, enable Microsoft Entra ID sign-in directly on the Static Web App:
+#
+1. In the Azure Portal, open your Static Web App resource.
+2. Click Authentication in the left menu.
+3. Click Add identity provider.
+4. Select Microsoft as the provider.
+5. Choose "Create new app registration" and give it a name (e.g., finops-dashboard-auth).
+6. Under Supported account types, select "Accounts in this organizational directory only."
+7. Click Add to create the identity provider.
+8. Under Restrictions, set "Unauthenticated requests" to "Return HTTP 401" (denies access to users who haven't signed in).
+#
+Once enabled, anyone navigating to your dashboard URL will be redirected to the Microsoft sign-in page before seeing the dashboard. Only users within your Entra ID tenant will be granted access.
+#
+Step 10: Configure the CORS Rule on Your Azure Functions Backend
+For the frontend and backend to communicate over Azure's internal network, set the CORS policy on the Function App:
+#
+PowerShell
+az functionapp cors add \
+  --name magel-finops-api \
+  --resource-group FinOps-Backend-RG \
+  --allowed-origins "https://finops-dashboard.azurestaticapps.net"
+#
+This tells the Function App to accept API requests only from your deployed dashboard.
+#
+Common Errors and Fixes
+#
+Error: Deployment workflow fails with "app_location folder does not exist"
+If your React source code is inside a subfolder (e.g., frontend/), change --app-location to "frontend" in both the az command and the GitHub Actions workflow file.
+#
+Error: API calls from the dashboard return CORS errors
+Run the az functionapp cors add command from Step 10 and make sure the allowed origin matches exactly (including https://).
+#
+Error: 403 Forbidden after applying IP restrictions
+If you are locked out, remove the IP restrictions temporarily:
+#
+PowerShell
+az staticwebapp hostname set --name finops-dashboard --resource-group FinOps-Backend-RG --clear-ip-security-restrictions
+#
+Once your VPN is connected and you can access the dashboard, re-apply the correct IP range.
+#
+Documented Steps for Future Teams
+Once this is saved, your deployment routine simplifies to this pipeline:
+1. Push code to the main branch.
+2. GitHub Actions automatically builds and deploys to Azure Static Web Apps.
+3. The dashboard loads at https://finops-dashboard.azurestaticapps.net.
+4. Corporate IP restrictions and Entra ID SSO handle all access control — no Cloudflare, no Render, no third-party proxy.

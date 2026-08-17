@@ -1,11 +1,18 @@
 # =============================================================
 # Render Blueprint Configuration
 # =============================================================
-# NOTE: Network isolation requires a Render Private Space.
-# After deploying, enable it in the Render dashboard:
-#   1. Upgrade to a Private Space plan
-#   2. Go to Settings > Networking > Isolation > Enabled
-#   3. Whitelist your corporate VPN IP range
+# NETWORK ISOLATION: Render does not natively block public
+# internet traffic on web services. Instead, this frontend is
+# deployed as a public web service and proxied behind Cloudflare.
+# Cloudflare WAF IP allowlisting restricts access to only
+# corporate VPN / office IP ranges.
+#
+# Setup:
+#   1. Deploy this service to Render
+#   2. Point your domain's nameservers to Cloudflare
+#   3. In Cloudflare: DNS > proxy is ON for the service hostname
+#   4. In Cloudflare: Security > WAF > IP Access Rules > allow corporate IPs
+#   5. In Cloudflare: Security > WAF > create a Block rule for "All other traffic"
 # =============================================================
 
 services:
