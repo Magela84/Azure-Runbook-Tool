@@ -4,6 +4,8 @@ A FinOps cost management suite that visualizes Azure subscription spend in real 
 
 ## Architecture
 
+![Azure Cost Visibility Dashboard Architecture](architecture-diagram.png)
+
 ```
 ┌─────────────────────────┐        ┌────────────────────────────────────┐
 │  React Frontend (UI)    │  HTTP  │  Azure Functions (Serverless API)  │
@@ -18,6 +20,8 @@ A FinOps cost management suite that visualizes Azure subscription spend in real 
                                             └────────────────────┘
 ```
 
+> Open [`architecture-diagram.html`](architecture-diagram.html) in a browser for an animated, interactive version of the diagram above.
+
 - **Frontend**: `CostDashboard.jsx` renders a live monthly cost trend from the API, mapped into Recharts `BarChart` components (`index.html`, `index.js`).
 - **Backend**: `GetCloudCosts` is an Azure Functions (Node.js V4 model) HTTP trigger that authenticates via `DefaultAzureCredential`, runs an `ActualCost` / `MonthToDate` usage query at daily granularity, and returns `{ date, cost }` JSON.
 - **Auth**: All Azure authentication stays server-side. Credentials are never exposed to the browser. The function identity is scoped to the **Cost Management Reader** role via RBAC.
@@ -26,21 +30,26 @@ A FinOps cost management suite that visualizes Azure subscription spend in real 
 
 ```
 Azure-Runbook-Tool/
-├── CostDashboard.jsx          # React chart component
-├── index.html                 # App shell
-├── index.js                   # React entry point
-├── local.settings.json        # Local Functions configuration
-└── FinOps Runbook/            # Operational documentation library
-    ├── FinOps Cost Runbook1               # Local setup + cloud provisioning
-    ├── GetCloudCosts                       # Serverless cost API source
+├── CostDashboard.jsx                          # React chart component
+├── index.html                                 # App shell
+├── index.js                                   # React entry point
+├── local.settings.json                        # Local Functions configuration
+├── render.yaml                                # Render deployment blueprint
+├── architecture-diagram.html                  # Animated architecture diagram
+├── architecture-diagram.png                   # Static screenshot of diagram
+└── FinOps Runbook/                            # Operational documentation library
+    ├── FinOps Cost Runbook1                   # Local setup + cloud provisioning
+    ├── GetCloudCosts                          # Serverless cost API source
     ├── FinOps Containerization Docker Runbook
     ├── FinOps Docker Configuration Files Runbook
     ├── FinOps deployment onRender Runbook
     ├── deployment onRender using GitHub Actions Runbook
+    ├── FinOps Azure Static Web Apps Deployment Runbook
     ├── Managing FinOps Live Environment Runbook
     ├── FinOps Maintenance & Operations Runbook
     ├── FinOps Network Enterprise Audit Verification Runbook
     ├── FinOps Network Isolation future use Runbook
+    ├── FinOps Secure Audit Trails and Compliance Logs Runbook
     ├── FinOps Guide for Corporate End Users Runbook
     ├── FinOps User's Role Runbook
     └── sso.tf Documentation Runbook
@@ -142,7 +151,7 @@ terraform output sso_client_secret
 
 ## Network Isolation
 
-For enterprise deployments, network isolation restricts access to the corporate network or VPN. See the runbooks in `FinOps Runbook/` for the Render Private Space configuration, audit verification steps, and end-user access guidance.
+For enterprise deployments, the recommended approach is **Azure Static Web Apps** for the frontend (with native IP restrictions and Azure AD SSO) and **Azure VNet integration** for the Functions backend. See [`FinOps Network Isolation future use Runbook`](FinOps%20Runbook/FinOps%20Network%20Isolation%20future%20use%20Runbook) for the full setup, or [`FinOps Azure Static Web Apps Deployment Runbook`](FinOps%20Runbook/FinOps%20Azure%20Static%20Web%20Apps%20Deployment%20Runbook) for the deployment walkthrough.
 
 ## Security Notes
 
